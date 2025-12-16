@@ -487,6 +487,15 @@ public:
     CommandGetUserEmail(MegaClient*, const char *uid);
 };
 
+// processing action packets
+class MEGA_API CommandActionPackets : public Command
+{
+    const char* getJSON(MegaClient* clientOfRequest) override;
+public:
+    bool procresult(Result, JSON&) override;
+    CommandActionPackets(MegaClient*);
+};
+
 // reload nodes/shares/contacts
 class MEGA_API CommandFetchNodes : public Command
 {

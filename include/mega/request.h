@@ -69,6 +69,9 @@ public:
     // if contains only one command and that command is FetchNodes
     bool isFetchNodes() const;
 
+    // if contains only one command and that command is ActionPackets
+    bool isActionPackets() const;
+
     Command* getCurrentCommand();
 };
 

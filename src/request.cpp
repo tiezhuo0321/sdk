@@ -31,6 +31,11 @@ bool Request::isFetchNodes() const
     return cmds.size() == 1 && dynamic_cast<CommandFetchNodes*>(cmds.back().get());
 }
 
+bool Request::isActionPackets() const
+{
+    return cmds.size() == 1 && dynamic_cast<CommandActionPackets*>(cmds.back().get());
+}
+
 void Request::add(Command* c)
 {
     // Once this becomes the in-progress request, it must not have anything added
@@ -159,14 +164,15 @@ bool Request::processSeqTag(Command* cmd, bool withJSON, bool& parsedOk, bool in
 
 m_off_t Request::processChunk(const char* chunk, MegaClient *client)
 {
+    LOG_debug << "Request::processChunk()";
     if (stopProcessing || cmds.size() != 1)
     {
         clear();
         return 0;
     }
 
-    // Only fetchnodes command is currently supported
-    assert(isFetchNodes());
+    // Only fetchnodes and ActionPackets command is currently supported
+    assert(isFetchNodes() || isActionPackets());
 
     m_off_t consumed = 0;
     Command& cmd = *cmds[0];
@@ -178,13 +184,16 @@ m_off_t Request::processChunk(const char* chunk, MegaClient *client)
 
     if (start)
     {
-        if (!json.enterarray())
+        if (isFetchNodes())
         {
-            // Request-level error
-            clear();
-            return 0;
+            if (!json.enterarray())
+            {
+                // Request-level error
+                clear();
+                return 0;
+            }
+            consumed++;
         }
-        consumed++;
         assert(mJsonSplitter.isStarting());
     }
 
@@ -201,14 +210,17 @@ m_off_t Request::processChunk(const char* chunk, MegaClient *client)
     json.begin(chunk + consumed);
     if (mJsonSplitter.hasFinished())
     {
-        if (!json.leavearray())
+        if (isFetchNodes())
         {
-            LOG_err << "Unexpected end of JSON stream: " << json.pos;
-            assert(false);
-        }
-        else
-        {
-            consumed++;
+            if (!json.leavearray())
+            {
+                LOG_err << "Unexpected end of JSON stream: " << json.pos;
+                assert(false);
+            }
+            else
+            {
+                consumed++;
+            }
         }
         assert(!chunk[consumed]);
 
@@ -532,6 +544,7 @@ void RequestDispatcher::serverresponse(std::string&& movestring, MegaClient *cli
 
 size_t RequestDispatcher::serverChunk(const char *chunk, MegaClient *client)
 {
+    LOG_debug << "RequestDispatcher::serverChunk()";
     processing = true;
     size_t consumed = static_cast<size_t>(inflightreq.processChunk(chunk, client));
     processing = false;
