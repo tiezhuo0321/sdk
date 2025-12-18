@@ -6835,43 +6835,6 @@ bool CommandSetKeyPair::procresult(Result r, JSON& json)
     return false;
 }
 
-// processing action packets
-CommandActionPackets::CommandActionPackets(MegaClient* client)
-{
-    assert(client);
-
-    cmd("");
-
-    // TODO setup filters here
-    mFilters.emplace("<", [](JSON *)
-    {
-        LOG_debug << "filter < is called";
-        return true;
-    });
-
-    mFilters.emplace(">", [](JSON *)
-    {
-        LOG_debug << "filter < is called";
-        return true;
-    });
-}
-
-const char* CommandActionPackets::getJSON(MegaClient*)
-{
-    // the request for get action packets sends no data to server. This command is only for parsing the 
-    // server response (action packets) on the fly. The existing on the fly parsing is implemented for 
-    // CommandFetchNodes. Which use command object to setup filters. In order to reuse the on the fly 
-    // parseing code we have to implement a command object for action packets, just like CommandFetchNodes.
-    return "";
-}
-
-bool CommandActionPackets::procresult(Result r, JSON& json)
-{
-    (void)r;
-    (void)json;
-    return true;
-}
-
 // fetch full node tree
 CommandFetchNodes::CommandFetchNodes(MegaClient* client,
                                      int tag,

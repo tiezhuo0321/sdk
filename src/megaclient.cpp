@@ -2180,7 +2180,6 @@ std::string MegaClient::getWritableLinkAuthKey(handle nodeHandle)
 // nonblocking state machine executing all operations currently in progress
 void MegaClient::exec()
 {
-    LOG_debug << "MegaClient::exec() enter===========================================";
     CodeCounter::ScopeTimer ccst(performanceStats.execFunction);
 
     WAIT_CLASS::bumpds();
@@ -2247,7 +2246,6 @@ void MegaClient::exec()
     bool first = true;
     do
     {
-        LOG_debug << "do----------------------";
         if (!first)
         {
             WAIT_CLASS::bumpds();
@@ -2630,7 +2628,6 @@ void MegaClient::exec()
                     performanceStats.csRequestWaitTime.stop();
                 }
 
-                LOG_debug << pendingcs->getLogName() << "pendingcs->status=" << pendingcs->status;
                 switch (static_cast<reqstatus_t>(pendingcs->status))
                 {
                     case REQ_READY:
@@ -2707,12 +2704,7 @@ void MegaClient::exec()
                                 }
                                 else
                                 {
-                                    LOG_debug << pendingcs->getLogName()
-                                        << " pendingcs->bufpos" << pendingcs->bufpos
-                                        << " pendingcs->notifiedbufpos" << pendingcs->notifiedbufpos
-                                        << " pendingcs->size()" << pendingcs->size();
                                     size_t consumedBytes = reqs.serverChunk(pendingcs->data(), this);
-                                    LOG_debug << "consumedBytes=" << consumedBytes; 
                                     if (consumedBytes)
                                     {
                                         JSON_CHUNK_CONSUMED
@@ -3238,12 +3230,8 @@ void MegaClient::exec()
                 }
             #endif
 
-            LOG_debug << pendingsc->getLogName() << "pendingsc->status=" << pendingsc->status;
             switch (static_cast<reqstatus_t>(pendingsc->status))
             {
-            case REQ_READY:
-                break;
-
             case REQ_SUCCESS:
                 pendingscTimedOut = false;
                 if (pendingsc->contentlength == 1
@@ -3256,107 +3244,75 @@ void MegaClient::exec()
                     break;
                 }
 
-                if (pendingsc->mChunked)
+                if (*pendingsc->in.c_str() == '{')
                 {
-                    LOG_debug << pendingsc->getLogName() << "pendingsc->bufpos=" << pendingsc->bufpos
-                        << " pendingsc->notifiedbufpos=" << pendingsc->notifiedbufpos
-                        << " pendingsc->size()=" << pendingsc->size();
-                    size_t consumedBytes = reqs.serverChunk(pendingsc->data(), this);
-                    LOG_debug << pendingsc->getLogName() << "consumedBytes=" << consumedBytes;
-                    if (consumedBytes)
-                    {
-                        JSON_CHUNK_CONSUMED
-                            << "Consumed the last chunk of " << consumedBytes << " bytes. "
-                            << MaxDirectMessage(pendingsc->data(), consumedBytes, CONSUMED_CHUNK_MAX_LOGGING);
-                    }
-
-                    // The requests should be already terminated
-                    assert(!reqs.chunkedProgress());
-
-                    jsonsc.pos = nullptr;
-                    pendingsc.reset();
-                    btsc.reset();
-
-                    // upon reception of action packets, if the cs request is waiting for a retry
-                    // and it failed due to -3 or -4 error from API, we can abort the backoff
-                    if (reqs.retryReasonIsApi())
-                    {
-                        btcs.reset();
-                    }
+                    insca = false;
+                    insca_notlast = false;
+                    jsonsc.begin(pendingsc->in.c_str());
+                    jsonsc.enterobject();
+                    app->notify_network_activity(NetworkActivityChannel::SC,
+                                                 NetworkActivityType::REQUEST_RECEIVED,
+                                                 API_OK);
                     break;
                 }
                 else
                 {
-                    if (*pendingsc->in.c_str() == '{')
+                    error e = (error)atoi(pendingsc->in.c_str());
+                    if ((e == API_ESID) || (e == API_ENOENT && loggedIntoFolder()))
                     {
-                        insca = false;
-                        insca_notlast = false;
-                        jsonsc.begin(pendingsc->in.c_str());
-                        jsonsc.enterobject();
+                        app->request_error(e);
+                        scsn.stopScsn();
                         app->notify_network_activity(NetworkActivityChannel::SC,
-                                                 NetworkActivityType::REQUEST_RECEIVED,
-                                                 API_OK);
-                        break;
+                                                     NetworkActivityType::REQUEST_RECEIVED,
+                                                     e);
+                    }
+                    else if (e == API_ETOOMANY)
+                    {
+                        LOG_warn << "Too many pending updates - reloading local state";
+                        app->notify_network_activity(NetworkActivityChannel::SC,
+                                                     NetworkActivityType::REQUEST_RECEIVED,
+                                                     e);
+
+                        // Stop the sc channel to prevent the reception of multiple
+                        // API_ETOOMANY errors causing multiple consecutive reloads
+                        scsn.stopScsn();
+
+                        app->reloading();
+                        int creqtag = reqtag;
+                        reqtag = fetchnodestag; // associate with ongoing request, if any
+                        fetchingnodes = false;
+                        fetchnodestag = 0;
+
+                        // reloading mid-session so we definitely go to the servers
+                        // the node tree will be replaced when the reply arrives
+                        // actionpacketsCurrent will be reset at that time
+                        // nocache = true so that we get to an equal or later SCSN
+                        // right away.  The ir:1 mechanism is not reliable for this
+                        fetchnodes(true, false, true);
+                        reqtag = creqtag;
+                    }
+                    else if (e == API_EAGAIN || e == API_ERATELIMIT)
+                    {
+                        if (!statecurrent)
+                        {
+                            fnstats.eAgainCount++;
+                        }
+                        app->notify_network_activity(NetworkActivityChannel::SC,
+                                                     NetworkActivityType::REQUEST_RECEIVED,
+                                                     e);
+                    }
+                    else if (e == API_EBLOCKED)
+                    {
+                        app->request_error(API_EBLOCKED);
+                        block(true);
                     }
                     else
                     {
-                        error e = (error)atoi(pendingsc->in.c_str());
-                        if ((e == API_ESID) || (e == API_ENOENT && loggedIntoFolder()))
-                        {
-                            app->request_error(e);
-                            scsn.stopScsn();
-                            app->notify_network_activity(NetworkActivityChannel::SC,
-                                                     NetworkActivityType::REQUEST_RECEIVED,
-                                                     e);
-                        }
-                        else if (e == API_ETOOMANY)
-                        {
-                            LOG_warn << "Too many pending updates - reloading local state";
-                            app->notify_network_activity(NetworkActivityChannel::SC,
-                                                     NetworkActivityType::REQUEST_RECEIVED,
-                                                     e);
-
-                            // Stop the sc channel to prevent the reception of multiple
-                            // API_ETOOMANY errors causing multiple consecutive reloads
-                            scsn.stopScsn();
-
-                            app->reloading();
-                            int creqtag = reqtag;
-                            reqtag = fetchnodestag; // associate with ongoing request, if any
-                            fetchingnodes = false;
-                            fetchnodestag = 0;
-
-                            // reloading mid-session so we definitely go to the servers
-                            // the node tree will be replaced when the reply arrives
-                            // actionpacketsCurrent will be reset at that time
-                            // nocache = true so that we get to an equal or later SCSN
-                            // right away.  The ir:1 mechanism is not reliable for this
-                            fetchnodes(true, false, true);
-                            reqtag = creqtag;
-                        }
-                        else if (e == API_EAGAIN || e == API_ERATELIMIT)
-                        {
-                            if (!statecurrent)
-                            {
-                                fnstats.eAgainCount++;
-                            }
-                            app->notify_network_activity(NetworkActivityChannel::SC,
-                                                     NetworkActivityType::REQUEST_RECEIVED,
-                                                     e);
-                        }
-                        else if (e == API_EBLOCKED)
-                        {
-                            app->request_error(API_EBLOCKED);
-                            block(true);
-                        }
-                        else
-                        {
-                            LOG_err << "Unexpected sc response: " << pendingsc->in;
-                            app->notify_network_activity(NetworkActivityChannel::SC,
+                        LOG_err << "Unexpected sc response: " << pendingsc->in;
+                        app->notify_network_activity(NetworkActivityChannel::SC,
                                                      NetworkActivityType::REQUEST_ERROR,
                                                      e);
-                            scsn.stopScsn();
-                        }
+                        scsn.stopScsn();
                     }
                 }
 
@@ -3438,22 +3394,6 @@ void MegaClient::exec()
                     pendingsc.reset();
                     btsc.reset();
                 }
-                if (pendingsc->mChunked)
-                {
-                    LOG_debug << pendingsc->getLogName() << "pendingsc->bufpos=" << pendingsc->bufpos << " pendingsc->notifiedbufpos=" << pendingsc->notifiedbufpos;
-                    if (pendingsc->bufpos > pendingsc->notifiedbufpos)
-                    {
-                        size_t consumedBytes = reqs.serverChunk(pendingsc->data(), this);
-                        JSON_CHUNK_CONSUMED
-                            << "Consumed a chunk of " << consumedBytes << " bytes. "
-                            << "Total: " << reqs.chunkedProgress() << " of "
-                            << pendingsc->contentlength << ". "
-                            << MaxDirectMessage(pendingsc->data(), consumedBytes, CONSUMED_CHUNK_MAX_LOGGING);
-                        pendingsc->purge(consumedBytes);
-
-                        pendingsc->notifiedbufpos = pendingsc->bufpos;
-                    }
-                }
                 break;
             default:
                 break;
@@ -3517,9 +3457,6 @@ void MegaClient::exec()
                     {
                         pendingsc->posturl = httpio->APIURL;
                         pendingsc->posturl.append("wsc");
-                        LOG_debug << pendingsc->getLogName() << "add command for pendingsc.";
-                        reqs.add(new CommandActionPackets(this));
-                        pendingsc->mChunked = true;
                     }
                 }
 
@@ -3816,7 +3753,6 @@ void MegaClient::exec()
 
         httpio->updatedownloadspeed();
         httpio->updateuploadspeed();
-        LOG_debug << "while-------------------";
     } while (httpio->doio() || execdirectreads() || (!pendingcs && reqs.readyToSend() && btcs.armed()));
 
 
@@ -3856,7 +3792,6 @@ void MegaClient::exec()
 #endif
 
     reportLoggedInChanges();
-    LOG_debug << "MegaClient::exec() exit";
 }
 
 // get next event time from all subsystems, then invoke the waiter if needed
@@ -5559,7 +5494,7 @@ bool MegaClient::procsc()
                 case EOO:
                     if (!useralerts.isDeletedSharedNodesStashEmpty())
                     {
-            useralerts.purgeNodeVersionsFromStash();
+			useralerts.purgeNodeVersionsFromStash();
                         useralerts.convertStashedDeletedSharedNodes();
                     }
 
@@ -6824,29 +6759,24 @@ void MegaClient::sc_updatenode()
     const char* a = NULL;
     m_time_t ts = -1;
 
-    LOG_debug << "MegaClient::sc_updatenode()";
     for (;;)
     {
         switch (jsonsc.getnameid())
         {
             case makeNameid("n"):
                 h = jsonsc.gethandle();
-                LOG_debug << "MegaClient::sc_updatenode() n=" << h;
                 break;
 
             case name_id::u:
                 u = jsonsc.gethandle(USERHANDLE);
-                LOG_debug << "MegaClient::sc_updatenode() u=" << u;
                 break;
 
             case makeNameid("at"):
                 a = jsonsc.getvalue();
-                LOG_debug << "MegaClient::sc_updatenode() at=" << a;
                 break;
 
             case makeNameid("ts"):
                 ts = jsonsc.getint();
-                LOG_debug << "MegaClient::sc_updatenode() ts=" << ts;
                 break;
 
             case EOO:
@@ -6998,7 +6928,6 @@ CacheableStatus *MegaClient::CacheableStatusMap::getPtr(CacheableStatus::Type ty
 // read tree object (nodes and users)
 void MegaClient::readtree(JSON* j)
 {
-    LOG_debug << "MegaClient::readtree()";
     if (j->enterobject())
     {
         for (;;)
@@ -7060,7 +6989,6 @@ void MegaClient::readtree(JSON* j)
 // server-client newnodes processing
 handle MegaClient::sc_newnodes()
 {
-    LOG_debug << "MegaClient::sc_newnodes()";
     handle originatingUser = UNDEF;
     for (;;)
     {
@@ -7076,7 +7004,6 @@ handle MegaClient::sc_newnodes()
 
             case makeNameid("ou"):
                 originatingUser = jsonsc.gethandle(USERHANDLE);
-                LOG_debug << "MegaClient::sc_newnodes() originatingUser=" << originatingUser;
                 break;
 
             case EOO:
@@ -10581,7 +10508,6 @@ int MegaClient::readnodes(JSON* j,
                           bool modifiedByThisClient,
                           bool applykeys)
 {
-    LOG_debug << "MegaClient::readnodes()";
     if (!j->enterarray())
     {
         return 0;
@@ -10640,7 +10566,6 @@ int MegaClient::readnode(JSON* j,
 {
     std::shared_ptr<Node> n;
 
-    LOG_debug << "MegaClient::readnode()";
     if (j->enterobject())
     {
         handle h = UNDEF, ph = UNDEF;
