@@ -6751,6 +6751,30 @@ void exec_more(autocomplete::ACState& s)
     }
 }
 
+bool FindAndCopyFile(const std::string& name, const FileFingerprint& fp, std::string & existingFileNmae)
+{
+    sharedNode_vector nodes = client->mNodeManager.getNodesByFingerprint(fp);
+    for (auto& n : nodes)
+    {
+        if (n->type == FILENODE)
+        {
+            std::cout << "Found existing file with same content: " << n->displaypath() << endl;
+            existingFileNmae = n->displaypath();
+            autocomplete::ACState s;
+            s.words.push_back(std::string("cp"));
+            s.words.push_back(n->displaypath());
+
+            // TODO: the put command may provided full destination name, currently it always use
+            // local source name as remote destination name
+            s.words.push_back(name);
+
+            exec_cp(s);
+            return true;
+        }
+    }
+    return false;
+}
+
 void uploadLocalFolderContent(const LocalPath& localname, Node* cloudFolder, VersioningOption vo, bool allowDuplicateVersions);
 
 void uploadLocalPath(nodetype_t type, std::string name, const LocalPath& localname, Node* parent, const std::string& targetuser,
@@ -6783,6 +6807,13 @@ void uploadLocalPath(nodetype_t type, std::string name, const LocalPath& localna
                     cout << "Can't upload file over the top of a folder with the same name: " << name << endl;
                     return;
                 }
+            }
+            std::string existingFileName;
+            if (fp.isvalid && fp.size >= 1024*1024 && FindAndCopyFile(name, fp, existingFileName))
+            {
+                cout << "File with same content already exists. Copy file "
+                     << existingFileName << " to file " << name << endl;
+                return;
             }
             fa.reset();
 
