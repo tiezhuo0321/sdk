@@ -3230,6 +3230,10 @@ void MegaClient::exec()
                 }
             #endif
 
+            LOG_debug << pendingsc->getLogName()
+                          << "Handling SC request with status: " << pendingsc->status
+                          << ", pendingsc->contentlength=" << pendingsc->contentlength
+                          << ", pendingsc->in.size()=" << pendingsc->in.size();
             switch (static_cast<reqstatus_t>(pendingsc->status))
             {
             case REQ_SUCCESS:
@@ -3408,6 +3412,7 @@ void MegaClient::exec()
                 // completed - initiate next SC request
                 jsonsc.pos = nullptr;
                 pendingsc.reset();
+                LOG_debug << "SC processing completed";
                 btsc.reset();
 
                 // upon reception of action packets, if the cs request is waiting for a retry
@@ -5448,6 +5453,7 @@ void MegaClient::httprequest(const char *url, int method, bool binary, const cha
 // process server-client request
 bool MegaClient::procsc()
 {
+    LOG_debug << "MegaClient::procsc() enter";
     // prevent the sync thread from looking things up while we change the tree
     std::unique_lock<recursive_mutex> nodeTreeIsChanging(nodeTreeMutex);
 
@@ -5494,7 +5500,7 @@ bool MegaClient::procsc()
                 case EOO:
                     if (!useralerts.isDeletedSharedNodesStashEmpty())
                     {
-			useralerts.purgeNodeVersionsFromStash();
+            useralerts.purgeNodeVersionsFromStash();
                         useralerts.convertStashedDeletedSharedNodes();
                     }
 
@@ -5651,6 +5657,7 @@ bool MegaClient::procsc()
                     syncs.waiter->notify();
 #endif
 
+                    LOG_debug << "MegaClient::procsc() exit";
                     return true;
 
                 case makeNameid("a"):
@@ -5665,6 +5672,7 @@ bool MegaClient::procsc()
                     if (!jsonsc.storeobject())
                     {
                         LOG_err << "Error parsing sc request";
+                        LOG_debug << "MegaClient::procsc() exit";
                         return true;
                     }
             }
