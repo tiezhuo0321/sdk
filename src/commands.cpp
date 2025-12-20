@@ -6717,7 +6717,7 @@ bool CommandWhyAmIblocked::procresult(Result r, JSON& json)
 
     json.storeobject();
     client->app->whyamiblocked_result(API_EINTERNAL);
-	return false;
+    return false;
 }
 
 CommandSendSignupLink2::CommandSendSignupLink2(MegaClient* client, const char* email, const char* name)
@@ -6859,6 +6859,15 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
     mFilters.emplace(">",
                      [this](JSON*)
                      {
+                         return true;
+                     });
+
+    mFilters.emplace("{sn",
+                     [this, client](JSON* json)
+                     {
+                         string notifyurl;
+                         json->storeobject(&notifyurl);
+                         client->scnotifyurl = notifyurl;
                          return true;
                      });
 }
@@ -9100,8 +9109,8 @@ bool CommandChatLinkURL::procresult(Result r, JSON& json)
                     if (chatid != UNDEF && shard != -1 && !url.empty() && !ct.empty() && numPeers != -1)
                     {
                         client->app->chatlinkurl_result(chatid, shard, &url, &ct, numPeers, ts, meetingRoom,
-							ChatOptions(speakRequest, waitingRoom, openInvite).value(),
-							&schedMeetings, callid, API_OK);
+                            ChatOptions(speakRequest, waitingRoom, openInvite).value(),
+                            &schedMeetings, callid, API_OK);
                     }
                     else
                     {

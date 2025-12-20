@@ -3234,8 +3234,9 @@ void MegaClient::exec()
                           << "Handling SC request with status: " << pendingsc->status
                           << ", pendingsc->contentlength=" << pendingsc->contentlength
                           << ", pendingsc->in.size()=" << pendingsc->in.size()
-                          << ", pendingsc->size()=" << pendingsc->size();
-            switch (static_cast<reqstatus_t>(pendingsc->status))
+                          << ", pendingsc->size()=" << pendingsc->size()
+                          << ", pendingsc->mChunked=" << pendingsc->mChunked;
+                switch (static_cast<reqstatus_t>(pendingsc->status))
             {
             case REQ_SUCCESS:
                 pendingscTimedOut = false;
@@ -3468,9 +3469,9 @@ void MegaClient::exec()
                     {
                         pendingsc->posturl = httpio->APIURL;
                         pendingsc->posturl.append("wsc");
-                        pendingsc->mChunked = true;
-                        pendingsc->cmd.reset(new CommandActionPackets(this));
                     }
+                    pendingsc->mChunked = true;
+                    pendingsc->cmd.reset(new CommandActionPackets(this));
                 }
 
                 pendingsc->protect = true;
