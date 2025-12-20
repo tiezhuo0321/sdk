@@ -487,6 +487,16 @@ public:
     CommandGetUserEmail(MegaClient*, const char *uid);
 };
 
+// This command is not a real command. The server-client communication sends no data to server.
+// The response contains action packets. This command will store the filters to parse the 
+// action packets on the fly.
+class MEGA_API CommandActionPackets: public Command
+{
+public:
+    bool procresult(Result, JSON&) override;
+    CommandActionPackets(MegaClient*);
+};
+
 // reload nodes/shares/contacts
 class MEGA_API CommandFetchNodes : public Command
 {

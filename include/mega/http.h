@@ -48,6 +48,8 @@
 #include <netinet/in.h>
 #endif
 
+#include "json.h"
+
 namespace mega {
 
 #ifdef _WIN32
@@ -456,6 +458,8 @@ struct MEGA_API HttpReq
     // prevent raw data from being dumped in debug mode
     bool binary;
 
+    std::unique_ptr<Command> cmd;
+
     HttpReq(bool = false);
     virtual ~HttpReq();
     void init();
@@ -484,12 +488,17 @@ struct MEGA_API HttpReq
         logname += newLogName;
     }
 
+    m_off_t processChunk();
+
 private:
     static std::atomic_uint32_t nextReqId;
     const uint32_t reqId;
 
     // identify different channels from different MegaClients etc in the log
     std::string logname;
+
+    JSONSplitter mJsonSplitter;
+
 
     void prepareMethod(HttpIO* clientHttpIo, const httpmethod_t reqMethod);
 };

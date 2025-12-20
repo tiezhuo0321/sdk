@@ -3233,7 +3233,8 @@ void MegaClient::exec()
             LOG_debug << pendingsc->getLogName()
                           << "Handling SC request with status: " << pendingsc->status
                           << ", pendingsc->contentlength=" << pendingsc->contentlength
-                          << ", pendingsc->in.size()=" << pendingsc->in.size();
+                          << ", pendingsc->in.size()=" << pendingsc->in.size()
+                          << ", pendingsc->size()=" << pendingsc->size();
             switch (static_cast<reqstatus_t>(pendingsc->status))
             {
             case REQ_SUCCESS:
@@ -3246,6 +3247,11 @@ void MegaClient::exec()
                     pendingsc.reset();
                     btsc.reset();
                     break;
+                }
+
+                if (pendingsc->mChunked)
+                {
+                    pendingsc->processChunk();
                 }
 
                 if (*pendingsc->in.c_str() == '{')
@@ -3462,6 +3468,8 @@ void MegaClient::exec()
                     {
                         pendingsc->posturl = httpio->APIURL;
                         pendingsc->posturl.append("wsc");
+                        pendingsc->mChunked = true;
+                        pendingsc->cmd.reset(new CommandActionPackets(this));
                     }
                 }
 

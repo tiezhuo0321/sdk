@@ -6835,6 +6835,35 @@ bool CommandSetKeyPair::procresult(Result r, JSON& json)
     return false;
 }
 
+bool CommandActionPackets::procresult(Result, JSON&)
+{
+    return true;
+}
+CommandActionPackets::CommandActionPackets(MegaClient* client)
+{
+    assert(client);
+
+    cmd("");
+
+    ///////////////////////////////////
+    // Filters for parsing in streaming
+
+    // Parsing of chunk started
+    mFilters.emplace("<",
+                     [this, client](JSON*)
+                     {
+                         return true;
+                     });
+
+    // Parsing of chunk finished
+    mFilters.emplace(">",
+                     [this](JSON*)
+                     {
+                         return true;
+                     });
+}
+
+
 // fetch full node tree
 CommandFetchNodes::CommandFetchNodes(MegaClient* client,
                                      int tag,
