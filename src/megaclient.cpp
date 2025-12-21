@@ -10612,7 +10612,7 @@ int MegaClient::readnodes(JSON* j,
     return j->leavearray();
 }
 
-void MegaClient::readaction(JSON* json)
+void MegaClient::readaction(JSON*)
 {
 }
 
