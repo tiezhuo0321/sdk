@@ -3418,6 +3418,7 @@ void MegaClient::exec()
                     pendingscTimedOut = true;
                     pendingsc.reset();
                     btsc.reset();
+                    break;
                 }
                 if (pendingsc->mChunked && pendingsc->bufpos > pendingsc->notifiedbufpos)
                 {

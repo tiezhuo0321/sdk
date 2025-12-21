@@ -6862,7 +6862,7 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                          return true;
                      });
 
-    mFilters.emplace("{sn",
+    mFilters.emplace("{\"w",
                      [this, client](JSON* json)
                      {
                          string notifyurl;
