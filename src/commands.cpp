@@ -6896,6 +6896,7 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                      [this, client](JSON* json)
                      {
                          JSON_CHUNK_PROCESSING << "entered filter {[a" << ", json=" << json->pos;
+                         json->leavearray();
                          return true;
                      });
 

@@ -10624,31 +10624,32 @@ void MegaClient::readua(JSON* json)
         switch (name)
         {
             case name_id::u:
-                jsonsc.gethandle(USERHANDLE);
+                json->gethandle(USERHANDLE);
                 break;
 
             case makeNameid("ua"):
-                if (jsonsc.enterarray())
+                if (json->enterarray())
                 {
-                    while (jsonsc.storeobject(&ua))
+                    while (json->storeobject(&ua))
                     {
                         ualist.push_back(ua);
                     }
-                    jsonsc.leavearray();
+                    json->leavearray();
                 }
                 break;
 
             case makeNameid("v"):
-                if (jsonsc.enterarray())
+                if (json->enterarray())
                 {
-                    while (jsonsc.storeobject(&uav))
+                    while (json->storeobject(&uav))
                     {
                         uavlist.push_back(uav);
                     }
-                    jsonsc.leavearray();
+                    json->leavearray();
                 }
                 break;
         }
+        json->leaveobject();
     }
 }
 
