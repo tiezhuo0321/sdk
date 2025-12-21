@@ -3236,7 +3236,7 @@ void MegaClient::exec()
                           << ", pendingsc->in.size()=" << pendingsc->in.size()
                           << ", pendingsc->size()=" << pendingsc->size()
                           << ", pendingsc->mChunked=" << pendingsc->mChunked;
-                switch (static_cast<reqstatus_t>(pendingsc->status))
+            switch (static_cast<reqstatus_t>(pendingsc->status))
             {
             case REQ_SUCCESS:
                 pendingscTimedOut = false;
@@ -3252,6 +3252,7 @@ void MegaClient::exec()
 
                 if (pendingsc->mChunked)
                 {
+                    isLastChunk = true;
                     size_t consumedBytes = pendingsc->processChunk();
                     if (consumedBytes)
                     {
@@ -3264,9 +3265,16 @@ void MegaClient::exec()
                     app->notify_network_activity(NetworkActivityChannel::SC,
                                                  NetworkActivityType::REQUEST_RECEIVED,
                                                  API_OK);
+#if 0 // currently filters is not ready we still use procsc() to parse the action packets.
                     pendingsc.reset();
                     btsc.reset();
                     notifypurge();
+#else
+                    insca = false;
+                    insca_notlast = false;
+                    jsonsc.begin(pendingsc->in.c_str());
+                    jsonsc.enterobject();
+#endif
                     break;
                 }
                 else if (*pendingsc->in.c_str() == '{')
@@ -3498,6 +3506,7 @@ void MegaClient::exec()
                         pendingsc->posturl.append("wsc");
                     }
                     pendingsc->mChunked = true;
+                    isLastChunk = false;
                     pendingsc->cmd.reset(new CommandActionPackets(this));
                 }
 
@@ -5534,9 +5543,14 @@ bool MegaClient::procsc()
                     break;
 
                 case EOO:
+                    if (pendingsc->mChunked && !isLastChunk)
+                    {
+                        LOG_debug << "MegaClient::procsc() exit";
+                        return true;
+                    }
                     if (!useralerts.isDeletedSharedNodesStashEmpty())
                     {
-            useralerts.purgeNodeVersionsFromStash();
+                        useralerts.purgeNodeVersionsFromStash();
                         useralerts.convertStashedDeletedSharedNodes();
                     }
 
