@@ -1753,7 +1753,7 @@ private:
 
     // badhost report
     HttpReq* badhostcs;
-
+    
     // Working lock
     unique_ptr<HttpReq> workinglockcs;
 
@@ -2455,6 +2455,9 @@ public:
 
     void readipc(JSON*);
     void readopc(JSON*);
+
+    // methods for processing action packets
+    void readaction(JSON * json);
 
     error readmiscflags(JSON*);
 

@@ -10612,6 +10612,10 @@ int MegaClient::readnodes(JSON* j,
     return j->leavearray();
 }
 
+void MegaClient::readaction(JSON* json)
+{
+}
+
 int MegaClient::readnode(JSON* j,
                          int notify,
                          putsource_t /*source*/,

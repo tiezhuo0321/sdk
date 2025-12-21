@@ -495,6 +495,11 @@ class MEGA_API CommandActionPackets: public Command
 public:
     bool procresult(Result, JSON&) override;
     CommandActionPackets(MegaClient*);
+
+private:
+    nameid actionType;
+    string squenceTag;
+    handle userHandle;
 };
 
 // reload nodes/shares/contacts

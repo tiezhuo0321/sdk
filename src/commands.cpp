@@ -6903,13 +6903,31 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                      [this, client](JSON* json)
                      {
                          LOG_debug << "entered filter {[a{" << ", json=" << json->pos;
+                         client->readaction(json);
                          return true;
                      });
 
-    mFilters.emplace(" ",
+    mFilters.emplace("{[a{\"a",
                      [this, client](JSON* json)
                      {
-                         LOG_debug << "entered filter " << ", json=" << json->pos;
+                         LOG_debug << "entered filter {[a{\"a" << ", json=" << json->pos;
+                         actionType = json->getnameidvalue();
+                         return true;
+                     });
+
+    mFilters.emplace("{[a{\"st",
+                     [this, client](JSON* json)
+                     {
+                         LOG_debug << "entered filter {[a{\"st" << ", json=" << json->pos;
+                         json->storeobject(&squenceTag);
+                         return client->sc_checkSequenceTag(squenceTag);
+                     });
+
+    mFilters.emplace("{[a{\"u",
+                     [this, client](JSON* json)
+                     {
+                         LOG_debug << "entered filter {[a{\"u" << ", json=" << json->pos;
+                         userHandle = json->gethandle(MegaClient::USERHANDLE);
                          return true;
                      });
 
