@@ -10612,8 +10612,44 @@ int MegaClient::readnodes(JSON* j,
     return j->leavearray();
 }
 
-void MegaClient::readaction(JSON*)
+void MegaClient::readua(JSON* json)
 {
+    nameid name;
+    handle uh = UNDEF;
+    string_vector ualist; // stores attribute names
+    string_vector uavlist; // stores attribute versions
+
+    while ((name = json->getnameid()) != EOO)
+    {
+        switch (name)
+        {
+            case name_id::u:
+                uh = jsonsc.gethandle(USERHANDLE);
+                break;
+
+            case makeNameid("ua"):
+                if (jsonsc.enterarray())
+                {
+                    while (jsonsc.storeobject(&ua))
+                    {
+                        ualist.push_back(ua);
+                    }
+                    jsonsc.leavearray();
+                }
+                break;
+
+            case makeNameid("v"):
+                if (jsonsc.enterarray())
+                {
+                    while (jsonsc.storeobject(&uav))
+                    {
+                        uavlist.push_back(uav);
+                    }
+                    jsonsc.leavearray();
+                }
+                break;
+        }
+    }
 }
 
 int MegaClient::readnode(JSON* j,

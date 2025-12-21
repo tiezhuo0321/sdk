@@ -499,7 +499,6 @@ public:
 private:
     nameid actionType;
     string squenceTag;
-    handle userHandle;
 };
 
 // reload nodes/shares/contacts

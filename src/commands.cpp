@@ -6852,7 +6852,7 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
     mFilters.emplace("<",
                      [this, client](JSON* json)
                      {
-                         LOG_debug << "entered filter <" << ", json=" << json->pos;
+                         JSON_CHUNK_PROCESSING << "entered filter <" << ", json=" << json->pos;
                          return true;
                      });
 
@@ -6860,57 +6860,67 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
     mFilters.emplace(">",
                      [this, client](JSON* json)
                      {
-                         LOG_debug << "entered filter >" << ", json=" << json->pos;
+                         JSON_CHUNK_PROCESSING << "entered filter >" << ", json=" << json->pos;
                          return true;
                      });
 
     mFilters.emplace("E",
                      [this, client](JSON* json)
                      {
-                         LOG_debug << "entered filter E" << ", json=" << json->pos;
+                         JSON_CHUNK_PROCESSING << "entered filter E" << ", json=" << json->pos;
                          return true;
                      });
 
     mFilters.emplace("#",
                      [this, client](JSON* json)
                      {
-                         LOG_debug << "entered filter #" << ", json=" << json->pos;
+                         JSON_CHUNK_PROCESSING << "entered filter #" << ", json=" << json->pos;
                          return true;
                      });
 
     mFilters.emplace("",
                      [this, client](JSON* json)
                      {
-                         LOG_debug << "entered filter \"\"" << ", json=" << json->pos;
+                         JSON_CHUNK_PROCESSING << "entered filter \"\"" << ", json=" << json->pos;
                          return true;
                      });
 
     mFilters.emplace("{",
                      [this, client](JSON* json)
                      {
-                         LOG_debug << "entered filter {" << ", json=" << json->pos;
+                         JSON_CHUNK_PROCESSING << "entered filter {" << ", json=" << json->pos;
                          return true;
                      });
 
     mFilters.emplace("{[a",
                      [this, client](JSON* json)
                      {
-                         LOG_debug << "entered filter {[a" << ", json=" << json->pos;
+                         JSON_CHUNK_PROCESSING << "entered filter {[a" << ", json=" << json->pos;
                          return true;
                      });
 
     mFilters.emplace("{[a{",
                      [this, client](JSON* json)
                      {
-                         LOG_debug << "entered filter {[a{" << ", json=" << json->pos;
-                         client->readaction(json);
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{" << ", json=" << json->pos;
+                         switch (actionType)
+                         {
+                             case makeNameid("ua"):
+                                 client->readua(json);
+                                 break;
+                             default:
+                                 LOG_err << "Unknown action packet type: "
+                                         << JSON::nameidToString(actionType);
+                                 return false;
+                         }
                          return true;
                      });
 
     mFilters.emplace("{[a{\"a",
                      [this, client](JSON* json)
                      {
-                         LOG_debug << "entered filter {[a{\"a" << ", json=" << json->pos;
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{\"a"
+                                               << ", json=" << json->pos;
                          actionType = json->getnameidvalue();
                          return true;
                      });
@@ -6918,28 +6928,12 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
     mFilters.emplace("{[a{\"st",
                      [this, client](JSON* json)
                      {
-                         LOG_debug << "entered filter {[a{\"st" << ", json=" << json->pos;
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{\"st"
+                                               << ", json=" << json->pos;
                          json->storeobject(&squenceTag);
                          return client->sc_checkSequenceTag(squenceTag);
                      });
 
-    mFilters.emplace("{[a{\"u",
-                     [this, client](JSON* json)
-                     {
-                         LOG_debug << "entered filter {[a{\"u" << ", json=" << json->pos;
-                         userHandle = json->gethandle(MegaClient::USERHANDLE);
-                         return true;
-                     });
-
-    mFilters.emplace("{\"w",
-                     [this, client](JSON* json)
-                     {
-                         LOG_debug << "entered filter {\"w" << ", json=" << json->pos;
-                         string notifyurl;
-                         json->storeobject(&notifyurl);
-                         client->scnotifyurl = notifyurl;
-                         return true;
-                     });
 }
 
 

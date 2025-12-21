@@ -2457,7 +2457,7 @@ public:
     void readopc(JSON*);
 
     // methods for processing action packets
-    void readaction(JSON * json);
+    void readua(JSON * json);
 
     error readmiscflags(JSON*);
 
