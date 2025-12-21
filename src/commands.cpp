@@ -6852,6 +6852,7 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
     mFilters.emplace("<",
                      [this, client](JSON*)
                      {
+                         LOG_debug << "entered filter <" << ", json=" << json->pos;
                          return true;
                      });
 
@@ -6859,12 +6860,63 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
     mFilters.emplace(">",
                      [this](JSON*)
                      {
+                         LOG_debug << "entered filter >" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace("E",
+                     [this, client](JSON* json)
+                     {
+                         LOG_debug << "entered filter E" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace("#",
+                     [this, client](JSON* json)
+                     {
+                         LOG_debug << "entered filter #" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace("",
+                     [this, client](JSON* json)
+                     {
+                         LOG_debug << "entered filter \"\"" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace("{",
+                     [this, client](JSON* json)
+                     {
+                         LOG_debug << "entered filter {" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace("{[a",
+                     [this, client](JSON* json)
+                     {
+                         LOG_debug << "entered filter {[a" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace("{[a{",
+                     [this, client](JSON* json)
+                     {
+                         LOG_debug << "entered filter {[a{" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace(" ",
+                     [this, client](JSON* json)
+                     {
+                         LOG_debug << "entered filter " << ", json=" << json->pos;
                          return true;
                      });
 
     mFilters.emplace("{\"w",
                      [this, client](JSON* json)
                      {
+                         LOG_debug << "entered filter {\"w" << ", json=" << json->pos;
                          string notifyurl;
                          json->storeobject(&notifyurl);
                          client->scnotifyurl = notifyurl;
