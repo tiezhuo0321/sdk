@@ -6909,8 +6909,7 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                                  client->readua(json);
                                  break;
                              default:
-                                 LOG_err << "Unknown action packet type: "
-                                         << JSON::nameidToString(actionType);
+                                 LOG_err << "Unknown action packet type: " << actionType;
                                  return false;
                          }
                          return true;
