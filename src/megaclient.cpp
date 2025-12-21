@@ -3264,6 +3264,13 @@ void MegaClient::exec()
                     app->notify_network_activity(NetworkActivityChannel::SC,
                                                  NetworkActivityType::REQUEST_RECEIVED,
                                                  API_OK);
+
+                    WAIT_CLASS::bumpds();
+
+                    delete pendingcs;
+                    pendingcs = NULL;
+
+                    notifypurge();
                     break;
                 }
                 else if (*pendingsc->in.c_str() == '{')
