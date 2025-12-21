@@ -10615,7 +10615,6 @@ int MegaClient::readnodes(JSON* j,
 void MegaClient::readua(JSON* json)
 {
     nameid name;
-    handle uh = UNDEF;
     string ua, uav;
     string_vector ualist; // stores attribute names
     string_vector uavlist; // stores attribute versions
@@ -10625,7 +10624,7 @@ void MegaClient::readua(JSON* json)
         switch (name)
         {
             case name_id::u:
-                uh = jsonsc.gethandle(USERHANDLE);
+                jsonsc.gethandle(USERHANDLE);
                 break;
 
             case makeNameid("ua"):
