@@ -10616,6 +10616,7 @@ void MegaClient::readua(JSON* json)
 {
     nameid name;
     handle uh = UNDEF;
+    string ua, uav;
     string_vector ualist; // stores attribute names
     string_vector uavlist; // stores attribute versions
 
