@@ -6850,7 +6850,7 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
 
     // Parsing of chunk started
     mFilters.emplace("<",
-                     [this, client](JSON*)
+                     [this, client](JSON* json)
                      {
                          LOG_debug << "entered filter <" << ", json=" << json->pos;
                          return true;
@@ -6858,7 +6858,7 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
 
     // Parsing of chunk finished
     mFilters.emplace(">",
-                     [this](JSON*)
+                     [this, client](JSON* json)
                      {
                          LOG_debug << "entered filter >" << ", json=" << json->pos;
                          return true;
