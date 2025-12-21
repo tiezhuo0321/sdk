@@ -3252,10 +3252,21 @@ void MegaClient::exec()
 
                 if (pendingsc->mChunked)
                 {
-                    pendingsc->processChunk();
+                    size_t consumedBytes = pendingsc->processChunk();
+                    if (consumedBytes)
+                    {
+                        JSON_CHUNK_CONSUMED << "Consumed the last chunk of " << consumedBytes
+                                            << " bytes. "
+                                            << MaxDirectMessage(pendingsc->data(),
+                                                                consumedBytes,
+                                                                CONSUMED_CHUNK_MAX_LOGGING);
+                    }
+                    app->notify_network_activity(NetworkActivityChannel::SC,
+                                                 NetworkActivityType::REQUEST_RECEIVED,
+                                                 API_OK);
+                    break;
                 }
-
-                if (*pendingsc->in.c_str() == '{')
+                else if (*pendingsc->in.c_str() == '{')
                 {
                     insca = false;
                     insca_notlast = false;
@@ -3404,6 +3415,18 @@ void MegaClient::exec()
                     pendingscTimedOut = true;
                     pendingsc.reset();
                     btsc.reset();
+                }
+                if (pendingsc->mChunked && pendingsc->bufpos > pendingsc->notifiedbufpos)
+                {
+                    size_t consumedBytes = pendingsc->processChunk();
+                    JSON_CHUNK_CONSUMED << "Consumed a chunk of " << consumedBytes << " bytes. "
+                                        << "Total: " << reqs.chunkedProgress() << " of "
+                                        << pendingsc->contentlength << ". "
+                                        << MaxDirectMessage(pendingsc->data(),
+                                                            consumedBytes,
+                                                            CONSUMED_CHUNK_MAX_LOGGING);
+                    pendingsc->purge(consumedBytes);
+                    pendingsc->notifiedbufpos = pendingsc->bufpos;
                 }
                 break;
             default:
