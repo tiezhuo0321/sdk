@@ -6945,6 +6945,7 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                          JSON_CHUNK_PROCESSING << "entered filter {[a{\"ou"
                                                << ", json=" << json->pos;
                          json->storeobject();
+                         return true;
                      });
 
     mFilters.emplace("{[a{{t[f",
