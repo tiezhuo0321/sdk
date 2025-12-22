@@ -6912,7 +6912,6 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                              case makeNameid("t"):
                                  // do nothing for the only child element f, it was parsed by "{[a{{t[f"
                                  // filter 
-                                 json->storeobject();  // ou element
                                  json->leaveobject();
                                  break;
                              default:
@@ -6938,6 +6937,14 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                                                << ", json=" << json->pos;
                          json->storeobject(&squenceTag);
                          return client->sc_checkSequenceTag(squenceTag);
+                     });
+
+    mFilters.emplace("{[a{\"ou",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{\"ou"
+                                               << ", json=" << json->pos;
+                         json->storeobject();
                      });
 
     mFilters.emplace("{[a{{t[f",
