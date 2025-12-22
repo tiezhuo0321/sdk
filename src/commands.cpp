@@ -6934,6 +6934,21 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                          return client->sc_checkSequenceTag(squenceTag);
                      });
 
+    mFilters.emplace("{[a{{t[f",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{{t[f" << ", json=" << json->pos;
+                         json->leavearray();
+                         return true;
+                     });
+
+    mFilters.emplace("{[a{{t[f{",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{{t[f{" << ", json=" << json->pos;
+                         client->readf(json);
+                         return true;
+                     });
 }
 
 

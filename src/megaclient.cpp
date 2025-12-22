@@ -10653,6 +10653,89 @@ void MegaClient::readua(JSON* json)
     }
 }
 
+void MegaClient::readf(JSON* json)
+{
+    handle h = UNDEF, ph = UNDEF;
+    handle u = 0, su = UNDEF;
+    nodetype_t t = TYPE_UNKNOWN;
+    const char* a = NULL;
+    const char* nodeKey = nullptr;
+    const char* fa = NULL;
+    const char* sk = NULL;
+    accesslevel_t rl = ACCESS_UNKNOWN;
+    m_off_t s = NEVER;
+    m_time_t ts = -1, sts = -1;
+    nameid name;
+    int nni = -1;
+
+    while ((name = json->getnameid()) != EOO)
+    {
+        switch (name)
+        {
+            case makeNameid("h"): // new node: handle
+                h = json->gethandle();
+                break;
+
+            case makeNameid("p"): // parent node
+                ph = json->gethandle();
+                break;
+
+            case name_id::u: // owner user
+                u = json->gethandle(USERHANDLE);
+                break;
+
+            case makeNameid("t"): // type
+                t = (nodetype_t)json->getint();
+                break;
+
+            case makeNameid("a"): // attributes
+                a = json->getvalue();
+                break;
+
+            case makeNameid("k"): // key(s)
+                nodeKey = json->getvalue();
+                break;
+
+            case makeNameid("s"): // file size
+                s = json->getint();
+                break;
+
+            case makeNameid("i"): // related source NewNode index
+                nni = int(json->getint());
+                break;
+
+            case makeNameid("ts"): // actual creation timestamp
+                ts = json->getint();
+                break;
+
+            case makeNameid("fa"): // file attributes
+                fa = json->getvalue();
+                break;
+
+                // inbound share attributes
+            case makeNameid("r"): // share access level
+                rl = (accesslevel_t)json->getint();
+                break;
+
+            case makeNameid("sk"): // share key
+                sk = json->getvalue();
+                break;
+
+            case makeNameid("su"): // sharing user
+                su = json->gethandle(USERHANDLE);
+                break;
+
+            case makeNameid("sts"): // share timestamp
+                sts = json->getint();
+                break;
+
+            default:
+                json->storeobject();
+        }
+    }
+    json->leaveobject();
+}
+
 int MegaClient::readnode(JSON* j,
                          int notify,
                          putsource_t /*source*/,
