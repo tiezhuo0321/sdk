@@ -6835,6 +6835,140 @@ bool CommandSetKeyPair::procresult(Result r, JSON& json)
     return false;
 }
 
+bool CommandActionPackets::procresult(Result, JSON&)
+{
+    return true;
+}
+CommandActionPackets::CommandActionPackets(MegaClient* client)
+{
+    assert(client);
+
+    cmd("");
+
+    ///////////////////////////////////
+    // Filters for parsing in streaming
+
+    // Parsing of chunk started
+    mFilters.emplace("<",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter <" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    // Parsing of chunk finished
+    mFilters.emplace(">",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter >" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace("E",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter E" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace("#",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter #" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace("",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter \"\"" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace("{",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {" << ", json=" << json->pos;
+                         return true;
+                     });
+
+    mFilters.emplace("{[a",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {[a" << ", json=" << json->pos;
+                         json->leavearray();
+                         return true;
+                     });
+
+    mFilters.emplace("{[a{",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{" << ", json=" << json->pos;
+                         switch (actionType)
+                         {
+                             case makeNameid("ua"):
+                                 client->readua(json);
+                                 break;
+                             default:
+                                 nameid name = json->getnameid();
+                                 for (; name != EOO; name = json->getnameid())
+                                 {
+                                     json->storeobject();
+                                 }
+                                 json->leaveobject();
+                                 break;
+                         }
+
+                         return true;
+                     });
+
+    mFilters.emplace("{[a{\"a",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{\"a"
+                                               << ", json=" << json->pos;
+                         actionType = json->getnameidvalue();
+                         return true;
+                     });
+
+    mFilters.emplace("{[a{\"st",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{\"st"
+                                               << ", json=" << json->pos;
+                         json->storeobject(&squenceTag);
+                         return client->sc_checkSequenceTag(squenceTag);
+                     });
+
+    mFilters.emplace("{[a{{t[f",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{{t[f"
+                                               << ", json=" << json->pos;
+                         json->leavearray();
+                         return true;
+                     });
+
+    mFilters.emplace("{[a{{t[f{",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{{t[f{"
+                                               << ", json=" << json->pos;
+                         client->readf(json);
+                         return true;
+                     });
+
+    mFilters.emplace("{[a{{t",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{{t"
+                                               << ", json=" << json->pos;
+                         json->leaveobject();
+                         return true;
+                     });
+}
+
+
 // fetch full node tree
 CommandFetchNodes::CommandFetchNodes(MegaClient* client,
                                      int tag,

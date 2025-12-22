@@ -3244,7 +3244,34 @@ void MegaClient::exec()
                     break;
                 }
 
-                if (*pendingsc->in.c_str() == '{')
+                if (pendingsc->mChunked)
+                {
+                    isLastChunk = true;
+                    size_t consumedBytes = pendingsc->processChunk();
+                    if (consumedBytes)
+                    {
+                        JSON_CHUNK_CONSUMED << "Consumed the last chunk of " << consumedBytes
+                                            << " bytes. "
+                                            << MaxDirectMessage(pendingsc->data(),
+                                                                consumedBytes,
+                                                                CONSUMED_CHUNK_MAX_LOGGING);
+                    }
+                    app->notify_network_activity(NetworkActivityChannel::SC,
+                                                 NetworkActivityType::REQUEST_RECEIVED,
+                                                 API_OK);
+#if 0 // currently filters is not ready we still use procsc() to parse the action packets.
+                    pendingsc.reset();
+                    btsc.reset();
+                    notifypurge();
+#else
+                    insca = false;
+                    insca_notlast = false;
+                    jsonsc.begin(pendingsc->in.c_str());
+                    jsonsc.enterobject();
+#endif
+                    break;
+                }
+                else if (*pendingsc->in.c_str() == '{')
                 {
                     insca = false;
                     insca_notlast = false;
@@ -3393,6 +3420,19 @@ void MegaClient::exec()
                     pendingscTimedOut = true;
                     pendingsc.reset();
                     btsc.reset();
+                    break;
+                }
+                if (pendingsc->mChunked && pendingsc->bufpos > pendingsc->notifiedbufpos)
+                {
+                    size_t consumedBytes = pendingsc->processChunk();
+                    JSON_CHUNK_CONSUMED << "Consumed a chunk of " << consumedBytes << " bytes. "
+                                        << "Total: " << reqs.chunkedProgress() << " of "
+                                        << pendingsc->contentlength << ". "
+                                        << MaxDirectMessage(pendingsc->data(),
+                                                            consumedBytes,
+                                                            CONSUMED_CHUNK_MAX_LOGGING);
+                    pendingsc->purge(consumedBytes);
+                    pendingsc->notifiedbufpos = pendingsc->bufpos;
                 }
                 break;
             default:
@@ -3458,6 +3498,9 @@ void MegaClient::exec()
                         pendingsc->posturl = httpio->APIURL;
                         pendingsc->posturl.append("wsc");
                     }
+                    pendingsc->mChunked = true;
+                    isLastChunk = false;
+                    pendingsc->cmd.reset(new CommandActionPackets(this));
                 }
 
                 pendingsc->protect = true;
@@ -5492,6 +5535,10 @@ bool MegaClient::procsc()
                     break;
 
                 case EOO:
+                    if (pendingsc->mChunked && !isLastChunk)
+                    {
+                        return true;
+                    }
                     if (!useralerts.isDeletedSharedNodesStashEmpty())
                     {
 			useralerts.purgeNodeVersionsFromStash();
@@ -10552,6 +10599,121 @@ int MegaClient::readnodes(JSON* j,
 #endif
 
     return j->leavearray();
+}
+
+void MegaClient::readua(JSON* json)
+{
+    nameid name;
+    string ua, uav;
+    string_vector ualist; // stores attribute names
+    string_vector uavlist; // stores attribute versions
+
+    while ((name = json->getnameid()) != EOO)
+    {
+        switch (name)
+        {
+            case name_id::u:
+                json->gethandle(USERHANDLE);
+                break;
+
+            case makeNameid("ua"):
+                if (json->enterarray())
+                {
+                    while (json->storeobject(&ua))
+                    {
+                        ualist.push_back(ua);
+                    }
+                    json->leavearray();
+                }
+                break;
+
+            case makeNameid("v"):
+                if (json->enterarray())
+                {
+                    while (json->storeobject(&uav))
+                    {
+                        uavlist.push_back(uav);
+                    }
+                    json->leavearray();
+                }
+                break;
+        }
+        json->leaveobject();
+    }
+}
+
+void MegaClient::readf(JSON* json)
+{
+    nameid name;
+
+    json->enterobject();
+
+    while ((name = json->getnameid()) != EOO)
+    {
+        switch (name)
+        {
+            case makeNameid("h"): // new node: handle
+                json->gethandle();
+                break;
+
+            case makeNameid("p"): // parent node
+                json->gethandle();
+                break;
+
+            case name_id::u: // owner user
+                json->gethandle(USERHANDLE);
+                break;
+
+            case makeNameid("t"): // type
+                json->getint();
+                break;
+
+            case makeNameid("a"): // attributes
+                json->getvalue();
+                break;
+
+            case makeNameid("k"): // key(s)
+                json->getvalue();
+                break;
+
+            case makeNameid("s"): // file size
+                json->getint();
+                break;
+
+            case makeNameid("i"): // related source NewNode index
+                json->getint();
+                break;
+
+            case makeNameid("ts"): // actual creation timestamp
+                json->getint();
+                break;
+
+            case makeNameid("fa"): // file attributes
+                json->getvalue();
+                break;
+
+                // inbound share attributes
+            case makeNameid("r"): // share access level
+                json->getint();
+                break;
+
+            case makeNameid("sk"): // share key
+                json->getvalue();
+                break;
+
+            case makeNameid("su"): // sharing user
+                json->gethandle(USERHANDLE);
+                break;
+
+            case makeNameid("sts"): // share timestamp
+                json->getint();
+                break;
+
+            default:
+                json->storeobject();
+        }
+    }
+    json->leaveobject();
 }
 
 int MegaClient::readnode(JSON* j,

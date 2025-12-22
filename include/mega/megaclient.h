@@ -1740,6 +1740,7 @@ private:
     std::unique_ptr<HttpReq> pendingsc;
     std::unique_ptr<HttpReq> pendingscUserAlerts;
     BackoffTimer btsc;
+    bool isLastChunk = false;
 
     int mPendingCatchUps = 0;
     bool mReceivingCatchUp = false;
@@ -2454,6 +2455,10 @@ public:
 
     void readipc(JSON*);
     void readopc(JSON*);
+
+    // methods for processing action packets
+    void readua(JSON * json);
+    void readf(JSON* json);
 
     error readmiscflags(JSON*);
 

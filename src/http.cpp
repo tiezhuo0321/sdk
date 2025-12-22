@@ -427,6 +427,10 @@ void HttpReq::put(void* data, unsigned len, bool purge)
     bufpos += len;
 }
 
+m_off_t HttpReq::processChunk()
+{
+    return mJsonSplitter.processChunk(&cmd->mFilters, data());
+}
 
 HttpReq::http_buf_t::http_buf_t(byte* b, size_t s, size_t e)
     : start(s), end(e), buf(b)
