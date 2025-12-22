@@ -6909,19 +6909,16 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                              case makeNameid("ua"):
                                  client->readua(json);
                                  break;
-                             case makeNameid("t"):
-                                 // do nothing for the only child element f, it was parsed by "{[a{{t[f" filter
+                             default:
+                                 nameid name = json->getnameid();
+                                 for (; name != EOO; name = json->getnameid())
+                                 {
+                                     json->storeobject();
+                                 }
                                  json->leaveobject();
                                  break;
-                             default:
-                                 json->storeobject();
                          }
 
-                         nameid name = json->getnameid();
-                         for (; name != EOO; name = json->getnameid())
-                         {
-                             json->storeobject();
-                         }
                          return true;
                      });
 
