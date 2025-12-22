@@ -6910,13 +6910,17 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                                  client->readua(json);
                                  break;
                              case makeNameid("t"):
-                                 // do nothing for the only child element f, it was parsed by "{[a{{t[f"
-                                 // filter 
+                                 // do nothing for the only child element f, it was parsed by "{[a{{t[f" filter
                                  json->leaveobject();
                                  break;
                              default:
-                                 LOG_err << "Unknown action packet type: " << actionType;
-                                 return false;
+                                 json->storeobject();
+                         }
+
+                         nameid name = json->getnameid();
+                         for (; name != EOO; name = json->getnameid())
+                         {
+                             json->storeobject();
                          }
                          return true;
                      });
@@ -6937,15 +6941,6 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                                                << ", json=" << json->pos;
                          json->storeobject(&squenceTag);
                          return client->sc_checkSequenceTag(squenceTag);
-                     });
-
-    mFilters.emplace("{[a{\"ou",
-                     [this, client](JSON* json)
-                     {
-                         JSON_CHUNK_PROCESSING << "entered filter {[a{\"ou"
-                                               << ", json=" << json->pos;
-                         json->storeobject();
-                         return true;
                      });
 
     mFilters.emplace("{[a{{t[f",
