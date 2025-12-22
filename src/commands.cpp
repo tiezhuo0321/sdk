@@ -6963,7 +6963,7 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                      {
                          JSON_CHUNK_PROCESSING << "entered filter {[a{{t"
                                                << ", json=" << json->pos;
-                         json->leavearray();
+                         json->leaveobject();
                          return true;
                      });
 }
