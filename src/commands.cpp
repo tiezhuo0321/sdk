@@ -6909,6 +6909,12 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
                              case makeNameid("ua"):
                                  client->readua(json);
                                  break;
+                             case makeNameid("t"):
+                                 // do nothing for the only child element f, it was parsed by "{[a{{t[f"
+                                 // filter 
+                                 json->storeobject();  // ou element
+                                 json->leaveobject();
+                                 break;
                              default:
                                  LOG_err << "Unknown action packet type: " << actionType;
                                  return false;
@@ -6937,7 +6943,8 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
     mFilters.emplace("{[a{{t[f",
                      [this, client](JSON* json)
                      {
-                         JSON_CHUNK_PROCESSING << "entered filter {[a{{t[f" << ", json=" << json->pos;
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{{t[f"
+                                               << ", json=" << json->pos;
                          json->leavearray();
                          return true;
                      });
@@ -6945,8 +6952,18 @@ CommandActionPackets::CommandActionPackets(MegaClient* client)
     mFilters.emplace("{[a{{t[f{",
                      [this, client](JSON* json)
                      {
-                         JSON_CHUNK_PROCESSING << "entered filter {[a{{t[f{" << ", json=" << json->pos;
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{{t[f{"
+                                               << ", json=" << json->pos;
                          client->readf(json);
+                         return true;
+                     });
+
+    mFilters.emplace("{[a{{t",
+                     [this, client](JSON* json)
+                     {
+                         JSON_CHUNK_PROCESSING << "entered filter {[a{{t"
+                                               << ", json=" << json->pos;
+                         json->leavearray();
                          return true;
                      });
 }
